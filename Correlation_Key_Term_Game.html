@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Correlation Key Terms Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #555;
+            background: #e9ecef;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+        .card {
+            background-color: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 25px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+        .definition-text {
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        button.option-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        button.option-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        button.option-btn:active {
+            transform: translateY(0);
+        }
+        button.correct {
+            background-color: #27ae60 !important;
+        }
+        button.incorrect {
+            background-color: #c0392b !important;
+        }
+        .feedback {
+            margin-top: 20px;
+            font-weight: bold;
+            height: 24px;
+        }
+        .feedback.success { color: #27ae60; }
+        .feedback.error { color: #c0392b; }
+        .btn-reset {
+            margin-top: 30px;
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-reset:hover { background-color: #636e72; }
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #27ae60;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Correlation Key Terms Game</h1>
+    <p>Match the definition to the correct correlation term.</p>
+    <div class="score-board">
+        <span id="score">Score: 0</span>
+        <span id="question-count">Question: 1 / 10</span>
+    </div>
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="card">
+        <div class="definition-text" id="definition-display">Loading...</div>
+    </div>
+    <div class="options-grid" id="options-container">
+        <!-- Buttons will be generated here -->
+    </div>
+    <div class="feedback" id="feedback-display"></div>
+    <div id="final-screen" style="display: none;">
+        <h2>Quiz Complete!</h2>
+        <p id="final-score-text"></p>
+        <button class="btn-reset" onclick="initGame()">Play Again</button>
+    </div>
+</div>
+<script>
+    const data = [
+        { term: "Correlation", def: "A statistical measure that describes the <b>strength and direction of a relationship</b> between two variables." },
+        { term: "Scatterplot", def: "A graph that displays the relationship between two quantitative variables using points, where each point represents one observation." },
+        { term: "Positive correlation", def: "A relationship where <b>both variables move in the same direction</b>. As one variable increases, the other also increases." },
+        { term: "Negative correlation", def: "A relationship where <b>variables move in opposite directions</b>. As one variable increases, the other decreases." },
+        { term: "No correlation", def: "A situation where there is <b>no clear relationship</b> between the variables. The points appear random with no pattern." },
+        { term: "Correlation coefficient (r)", def: "A number between <b>-1 and +1</b> that measures the <b>strength and direction</b> of a linear relationship:<br>- <b>+1</b> = perfect positive<br>- <b>-1</b> = perfect negative<br>- <b>0</b> = no linear relationship" },
+        { term: "Linear relationship", def: "A relationship where the data points follow a <b>straight-line pattern</b> (either upward or downward)." },
+        { term: "Outlier", def: "A data point that is <b>far away from the rest of the data</b> and may affect the correlation." },
+        { term: "Causation", def: "A relationship where <b>a change in one variable directly produces a change (i.e., causes) in another variable.</b>" },
+        { term: "Spurious correlation", def: "A relationship where two variables appear related, but the relationship is actually caused by a <b>third variable</b> or is coincidental." }
+    ];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let questions = [];
+    let isAnswering = true;
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+    function initGame() {
+        score = 0;
+        currentQuestionIndex = 0;
+        questions = shuffleArray([...data]);
+        document.getElementById('final-screen').style.display = 'none';
+        document.getElementById('options-container').style.display = 'grid';
+        document.getElementById('definition-display').parentElement.style.display = 'flex';
+        updateScoreBoard();
+        loadQuestion();
+    }
+    function updateScoreBoard() {
+        document.getElementById('score').textContent = `Score: ${score}`;
+        document.getElementById('question-count').textContent = `Question: ${currentQuestionIndex + 1} / ${questions.length}`;
+        const progress = ((currentQuestionIndex) / questions.length) * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+    }
+    function loadQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            endGame();
+            return;
+        }
+        isAnswering = true;
+        const currentQ = questions[currentQuestionIndex];
+        document.getElementById('definition-display').innerHTML = currentQ.def;
+        document.getElementById('feedback-display').textContent = "";
+        document.getElementById('feedback-display').className = "feedback";
+        let options = [currentQ];
+        let distractors = data.filter(item => item.term !== currentQ.term);
+        shuffleArray(distractors);
+        options.push(...distractors.slice(0, 3));
+        shuffleArray(options);
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.term;
+            btn.onclick = () => checkAnswer(opt, btn, currentQ);
+            optionsContainer.appendChild(btn);
+        });
+        updateScoreBoard();
+    }
+    function checkAnswer(selected, btnElement, correct) {
+        if (!isAnswering) return;
+        isAnswering = false;
+        const buttons = document.querySelectorAll('.option-btn');
+        if (selected.term === correct.term) {
+            score++;
+            btnElement.classList.add('correct');
+            document.getElementById('feedback-display').textContent = "Correct!";
+            document.getElementById('feedback-display').classList.add('success');
+        } else {
+            btnElement.classList.add('incorrect');
+            document.getElementById('feedback-display').textContent = `Incorrect. The answer was ${correct.term}.`;
+            document.getElementById('feedback-display').classList.add('error');
+            buttons.forEach(b => {
+                if (b.textContent === correct.term) b.classList.add('correct');
+            });
+        }
+        setTimeout(() => {
+            currentQuestionIndex++;
+            loadQuestion();
+        }, 2000);
+    }
+    function endGame() {
+        document.getElementById('options-container').style.display = 'none';
+        document.getElementById('definition-display').parentElement.style.display = 'none';
+        document.getElementById('final-screen').style.display = 'block';
+        document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('question-count').textContent = `Question: ${questions.length} / ${questions.length}`;
+        const percentage = Math.round((score / questions.length) * 100);
+        let message = "";
+        if (percentage >= 90) message = "Outstanding! You're a correlation master!";
+        else if (percentage >= 70) message = "Great job! You know your correlation terms.";
+        else message = "Good effort! Review the terms and try again.";
+        document.getElementById('final-score-text').innerHTML = `You scored <strong>${score} out of ${questions.length}</strong> (${percentage}%)<br><br>${message}`;
+    }
+    initGame();
+</script>
+</body>
+</html>
